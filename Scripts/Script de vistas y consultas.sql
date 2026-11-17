@@ -212,19 +212,10 @@ JOIN Run r ON c.idComic = r.idComic
 WHERE r.idRun = 1;
 
 -- Paso 2: Insertar un nuevo Issue en idRun = 1
--- (El trigger trg_actualizar_ventas_run actualiza Run.ejemplaresVendidos automáticamente,
--- y se recalculan las puntuaciones y el acumulado en Comic).
+-- (Los triggers trg_actualizar_ventas_run y trg_actualizar_metricas_comic actualizan
+-- automáticamente la popularidad y ejemplaresVendidos en Run y Comic).
 INSERT INTO Issue (idIssue, numero, popularidad, ejemplaresVendidos, idRun)
 VALUES (1001, 99, 5.0, 25000, 1);
-
-UPDATE Run r
-SET popularidad = COALESCE((SELECT AVG(i.popularidad) FROM Issue i WHERE i.idRun = r.idRun), 0.0)
-WHERE r.idRun = 1;
-
-UPDATE Comic c
-SET popularidad = COALESCE((SELECT AVG(r.popularidad) FROM Run r WHERE r.idComic = c.idComic), 0.0),
-    ejemplaresVendidos = COALESCE((SELECT SUM(r.ejemplaresVendidos) FROM Run r WHERE r.idComic = c.idComic), 0)
-WHERE c.idComic = 1;
 
 -- Paso 3: Consultar valores actualizados tras la inserción del Issue
 SELECT 
@@ -243,15 +234,6 @@ WHERE r.idRun = 1;
 
 -- Paso 4: Eliminar el Issue insertado
 DELETE FROM Issue WHERE idIssue = 1001;
-
-UPDATE Run r
-SET popularidad = COALESCE((SELECT AVG(i.popularidad) FROM Issue i WHERE i.idRun = r.idRun), 0.0)
-WHERE r.idRun = 1;
-
-UPDATE Comic c
-SET popularidad = COALESCE((SELECT AVG(r.popularidad) FROM Run r WHERE r.idComic = c.idComic), 0.0),
-    ejemplaresVendidos = COALESCE((SELECT SUM(r.ejemplaresVendidos) FROM Run r WHERE r.idComic = c.idComic), 0)
-WHERE c.idComic = 1;
 
 -- Paso 5: Verificar restitución de los valores originales
 SELECT 
