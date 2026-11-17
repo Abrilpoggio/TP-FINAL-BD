@@ -277,3 +277,4 @@ DELETE FROM Cover WHERE idCover >= 100;
 DELETE FROM ParticipacionArtista WHERE idParticipacionArtista >= 100;
 DELETE FROM RunAutor WHERE idRunAutor >= 100;
 DELETE FROM Issue WHERE idIssue >= 100;
+
