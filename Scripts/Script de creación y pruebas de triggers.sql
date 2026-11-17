@@ -40,7 +40,7 @@ FOR EACH ROW
 EXECUTE FUNCTION trg_unica_portada_principal_func();
 
 
--- Trigger 2: Recalcular ejemplaresVendidos en Run (Tabla Issue)
+-- Trigger 2: Recalcular popularidad y ejemplaresVendidos en Run (Tabla Issue)
 CREATE OR REPLACE FUNCTION trg_actualizar_ventas_run_func()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -57,7 +57,12 @@ BEGIN
         SELECT SUM(ejemplaresVendidos)
         FROM Issue
         WHERE idRun = v_idRun
-    ), 0)
+    ), 0),
+        popularidad = COALESCE((
+        SELECT AVG(popularidad)
+        FROM Issue
+        WHERE idRun = v_idRun
+    ), 0.0)
     WHERE idRun = v_idRun;
 
     IF TG_OP = 'UPDATE' AND OLD.idRun != NEW.idRun THEN
@@ -66,7 +71,12 @@ BEGIN
             SELECT SUM(ejemplaresVendidos)
             FROM Issue
             WHERE idRun = OLD.idRun
-        ), 0)
+        ), 0),
+            popularidad = COALESCE((
+            SELECT AVG(popularidad)
+            FROM Issue
+            WHERE idRun = OLD.idRun
+        ), 0.0)
         WHERE idRun = OLD.idRun;
     END IF;
 
@@ -79,6 +89,57 @@ CREATE TRIGGER trg_actualizar_ventas_run
 AFTER INSERT OR UPDATE OR DELETE ON Issue
 FOR EACH ROW
 EXECUTE FUNCTION trg_actualizar_ventas_run_func();
+
+
+-- Trigger 2B: Propagar popularidad y ejemplaresVendidos de Run hacia Comic (Tabla Run)
+CREATE OR REPLACE FUNCTION trg_actualizar_metricas_comic_func()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_idComic INTEGER;
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        v_idComic := OLD.idComic;
+    ELSE
+        v_idComic := NEW.idComic;
+    END IF;
+
+    UPDATE Comic
+    SET ejemplaresVendidos = COALESCE((
+        SELECT SUM(ejemplaresVendidos)
+        FROM Run
+        WHERE idComic = v_idComic
+    ), 0),
+        popularidad = COALESCE((
+        SELECT AVG(popularidad)
+        FROM Run
+        WHERE idComic = v_idComic
+    ), 0.0)
+    WHERE idComic = v_idComic;
+
+    IF TG_OP = 'UPDATE' AND OLD.idComic != NEW.idComic THEN
+        UPDATE Comic
+        SET ejemplaresVendidos = COALESCE((
+            SELECT SUM(ejemplaresVendidos)
+            FROM Run
+            WHERE idComic = OLD.idComic
+        ), 0),
+            popularidad = COALESCE((
+            SELECT AVG(popularidad)
+            FROM Run
+            WHERE idComic = OLD.idComic
+        ), 0.0)
+        WHERE idComic = OLD.idComic;
+    END IF;
+
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_actualizar_metricas_comic ON Run;
+CREATE TRIGGER trg_actualizar_metricas_comic
+AFTER INSERT OR UPDATE OR DELETE ON Run
+FOR EACH ROW
+EXECUTE FUNCTION trg_actualizar_metricas_comic_func();
 
 
 -- Trigger 3: Validar fechaInicio de RunAutor respecto a fechaComienzo de Run
