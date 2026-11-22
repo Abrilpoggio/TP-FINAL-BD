@@ -1,39 +1,25 @@
 -- ============================================================================
--- SCRIPT DE CARGA DE DATOS INICIALES
--- Proyecto: TP FINAL BD - Propuesta 6 (Comics Archive)
--- Tablas: Persona, Artista, Autor, Empresa, Comic, Run, Issue, Cover,
---         ParticipacionArtista, RunAutor
--- Mínimo de tuplas por tabla: 10
+-- SCRIPT DE CARGA DE DATOS (PROPUESTA 6: COMICS ARCHIVE)
+-- Descripción: Carga inicial de datos consistente con las reglas de negocio,
+-- jerarquías temporales y cálculos de métricas.
 -- ============================================================================
-
--- Limpieza previa para permitir re-ejecutar el script sin errores de claves duplicadas
-TRUNCATE TABLE
-    Cover,
-    ParticipacionArtista,
-    RunAutor,
-    Issue,
-    Run,
-    Comic,
-    Empresa,
-    Autor,
-    Artista,
-    Persona
-CASCADE;
 
 -- ----------------------------------------------------------------------------
 -- 1. Tabla: Persona (10 tuplas)
+-- Nota: fechaComienzo coincide con la primera obra registrada en el sistema,
+-- respetando una diferencia mayor a 18 años con fechaNacimiento.
 -- ----------------------------------------------------------------------------
 INSERT INTO Persona (idPersona, nombre, apellidos, alias, fechaNacimiento, fechaComienzo) VALUES
-(1, 'Stan', 'Lee', 'The Man', '1922-12-28', '1939-11-01'),
-(2, 'Jack', 'Kirby', 'The King', '1917-08-28', '1936-01-15'),
-(3, 'Steve', 'Ditko', NULL, '1927-11-02', '1953-03-01'),
-(4, 'Frank', 'Miller', NULL, '1957-01-27', '1977-04-10'),
-(5, 'Alan', 'Moore', 'Original Writer', '1953-11-18', '1974-02-01'),
-(6, 'Todd', 'McFarlane', NULL, '1961-03-16', '1980-05-12'),
-(7, 'Jim', 'Lee', NULL, '1964-08-11', '1986-09-01'),
-(8, 'Brian Michael', 'Bendis', NULL, '1967-08-18', '1991-06-01'),
-(9, 'Fiona', 'Staples', NULL, '1984-09-08', '2006-10-15'),
-(10, 'Chip', 'Zdarsky', 'Steve Murray', '1975-12-21', '2000-01-10');
+(1, 'Stan', 'Lee', 'The Man', '1922-12-28', '1963-01-15'),
+(2, 'Jack', 'Kirby', 'The King', '1917-08-28', '1963-03-01'),
+(3, 'Steve', 'Ditko', NULL, '1927-11-02', '1963-01-15'),
+(4, 'Frank', 'Miller', NULL, '1957-01-27', '1979-03-01'),
+(5, 'Alan', 'Moore', 'Original Writer', '1953-11-18', '1986-06-01'),
+(6, 'Todd', 'McFarlane', NULL, '1961-03-16', '1992-03-15'),
+(7, 'Jim', 'Lee', NULL, '1964-08-11', '1991-08-01'),
+(8, 'Brian Michael', 'Bendis', NULL, '1967-08-18', '2000-01-05'),
+(9, 'Fiona', 'Staples', NULL, '1984-09-08', '2012-01-10'),
+(10, 'Chip', 'Zdarsky', 'Steve Murray', '1975-12-21', '2015-03-11');
 
 -- ----------------------------------------------------------------------------
 -- 2. Tabla: Artista (10 tuplas)
@@ -82,25 +68,23 @@ INSERT INTO Empresa (idEmpresa, nombre) VALUES
 
 -- ----------------------------------------------------------------------------
 -- 5. Tabla: Comic (10 tuplas)
--- Nota: ejemplaresVendidos y popularidad consolidan los valores de sus Runs.
+-- Nota: Comic 8, 9 y 10 inician con 0.0 y 0 ya que no poseen Runs con Issues asociados.
 -- ----------------------------------------------------------------------------
 INSERT INTO Comic (idComic, nombre, descripcion, fechaInicio, popularidad, ejemplaresVendidos, idEmpresa, idAutor) VALUES
 (1, 'The Amazing Spider-Man', 'Las aventuras del héroe arácnido Peter Parker', '1963-03-01', 4.8, 410000, 1, 1),
-(2, 'Batman', 'El Caballero de la Noche protege Gotham City', '1940-04-25', 5.0, 200000, 2, 2),
+(2, 'Batman: Year One', 'El origen definitivo del Caballero de la Noche en Gotham', '1986-02-01', 5.0, 200000, 2, 2),
 (3, 'Watchmen', 'Deconstrucción del mito del superhéroe', '1986-09-01', 5.0, 180000, 2, 3),
 (4, 'Spawn', 'Al Simmons regresa del infierno como engendro', '1992-05-01', 4.3, 160000, 3, 8),
-(5, 'Saga', 'Una épica de ópera espacial y fantasía', '2012-03-14', 4.8, 95000, 3, 4),
-(6, 'Daredevil', 'El hombre sin miedo combate el crimen en Hells Kitchen', '1964-04-01', 4.75, 215000, 1, 2),
+(5, 'Saga', 'Una épica de ópera espacial y fantasía', '2012-03-14', 4.8, 95000, 3, 10),
+(6, 'Daredevil', 'El hombre sin miedo combate el crimen en Hells Kitchen', '1964-04-01', 4.75, 215000, 1, 1),
 (7, 'X-Men', 'Los mutantes luchan por un mundo que los teme', '1963-09-01', 5.0, 800000, 1, 1),
-(8, 'Hellboy', 'Un demonio investiga lo paranormal para el BPRD', '1993-08-01', 4.5, 0, 4, 2),
-(9, 'Teenage Mutant Ninja Turtles', 'Cuatro tortugas mutantes ninja entrenadas por Splinter', '1984-05-05', 4.4, 0, 5, 4),
-(10, 'Howard the Duck', 'Las cómicas aventuras de un pato detective en la Tierra', '2015-03-11', 4.1, 0, 1, 5);
+(8, 'Hellboy', 'Un demonio investiga lo paranormal para el BPRD', '1993-08-01', 0.0, 0, 4, 2),
+(9, 'Powers', 'Detectives de homicidios investigan crímenes de superhéroes', '2000-04-01', 0.0, 0, 3, 4),
+(10, 'Howard the Duck', 'Las cómicas aventuras de un pato detective en la Tierra', '2015-03-11', 0.0, 0, 1, 5);
 
 -- ----------------------------------------------------------------------------
 -- 6. Tabla: Run (10 tuplas)
--- Nota: Si el trigger trg_actualizar_ventas_run ya está activo, recalculará
--- automáticamente ejemplaresVendidos al insertar los Issues; también se
--- especifican los totales iniciales para que quede consistente en cualquier orden.
+-- Nota: Run 10 inicia en 0.0 y 0 al no poseer ningún Issue asignado.
 -- ----------------------------------------------------------------------------
 INSERT INTO Run (idRun, fechaComienzo, popularidad, ejemplaresVendidos, idComic) VALUES
 (1, '1963-03-01', 4.8, 270000, 1),
@@ -112,12 +96,10 @@ INSERT INTO Run (idRun, fechaComienzo, popularidad, ejemplaresVendidos, idComic)
 (7, '1991-10-01', 5.0, 800000, 7),
 (8, '2000-02-01', 4.8, 140000, 1),
 (9, '2019-02-01', 4.6, 105000, 6),
-(10, '1994-03-01', 4.5, 0, 8);
+(10, '1994-03-01', 0.0, 0, 8);
 
 -- ----------------------------------------------------------------------------
 -- 7. Tabla: Issue (10 tuplas)
--- Nota: Al insertar en Issue se ejecuta el trigger trg_actualizar_ventas_run
--- que recalcula automáticamente ejemplaresVendidos en la tabla Run.
 -- ----------------------------------------------------------------------------
 INSERT INTO Issue (idIssue, numero, popularidad, ejemplaresVendidos, idRun) VALUES
 (1, 1, 4.9, 150000, 1),
@@ -132,16 +114,10 @@ INSERT INTO Issue (idIssue, numero, popularidad, ejemplaresVendidos, idRun) VALU
 (10, 1, 4.6, 105000, 9);
 
 -- ----------------------------------------------------------------------------
--- 8. Tabla: Cover (15 tuplas: 10 portadas principales + 5 variant covers)
--- Nota:
--- - Cada Issue (1 al 10) tiene exactamente 1 portada principal (esPrincipal = TRUE).
--- - Se incluyen variant covers (esPrincipal = FALSE) en 2023 para la Consulta A,
---   variant covers exclusivas de idArtista = 4 (en cómics donde no hizo portada
---   principal ni interiores) para la Consulta C, y una variant cover reciente
---   (últimos 6 meses) de idArtista = 7 para verificar la exclusión en Consulta F.
+-- 8. Tabla: Cover (15 tuplas: 10 principales + 5 variant covers)
 -- ----------------------------------------------------------------------------
 INSERT INTO Cover (idCover, nombre, fechaCreacion, esPrincipal, idIssue, idArtista) VALUES
--- Portadas principales (1 por cada Issue)
+-- Portadas principales
 (1, 'Spider-Man #1 Regular Cover', '1963-01-15', TRUE, 1, 2),
 (2, 'Spider-Man #2 Regular Cover', '1963-02-15', TRUE, 2, 2),
 (3, 'Batman Year One Cover A', '1985-12-10', TRUE, 3, 3),
@@ -161,8 +137,6 @@ INSERT INTO Cover (idCover, nombre, fechaCreacion, esPrincipal, idIssue, idArtis
 
 -- ----------------------------------------------------------------------------
 -- 9. Tabla: ParticipacionArtista (10 tuplas)
--- Nota: Todas las participaciones tienen paginasAsignadas > 0 (cumple trg_validar_paginas).
--- El Issue 2 queda libre de participaciones iniciales para probar trg_validar_paginas.
 -- ----------------------------------------------------------------------------
 INSERT INTO ParticipacionArtista (idParticipacionArtista, rol, paginasAsignadas, idIssue, idArtista) VALUES
 (1, 'Dibujante de interiores', 22, 1, 2),
@@ -178,14 +152,13 @@ INSERT INTO ParticipacionArtista (idParticipacionArtista, rol, paginasAsignadas,
 
 -- ----------------------------------------------------------------------------
 -- 10. Tabla: RunAutor (10 tuplas)
--- Nota: Todas las fechaInicio son >= fechaComienzo del Run (cumple trg_validar_fecha_runautor).
 -- ----------------------------------------------------------------------------
 INSERT INTO RunAutor (idRunAutor, rol, fechaInicio, idRun, idAutor) VALUES
 (1, 'Escritor Principal', '1963-03-01', 1, 1),
 (2, 'Guionista', '1986-02-01', 2, 2),
 (3, 'Escritor', '1986-09-01', 3, 3),
 (4, 'Guionista y Co-creador', '1992-05-01', 4, 8),
-(5, 'Guionista', '2012-03-14', 5, 4),
+(5, 'Guionista', '2012-03-14', 5, 10),
 (6, 'Escritor Principal', '1979-05-01', 6, 2),
 (7, 'Co-guionista', '1991-10-01', 7, 9),
 (8, 'Guionista', '2000-02-01', 8, 4),
