@@ -112,20 +112,25 @@ GROUP BY art.idArtista, p.nombre, p.apellidos, p.alias, p.fechaComienzo;
 
 -- ----------------------------------------------------------------------------
 -- Consulta A: Listar los cómics con mayor cantidad de variant covers de un año en particular.
--- (Ejemplo de prueba para el año 2023)
+-- (Ejemplo de prueba para el año 2023: retorna únicamente el o los cómics que empatan en el máximo)
 -- ----------------------------------------------------------------------------
-SELECT 
-    c.idComic,
-    c.nombre AS comic_nombre,
-    COUNT(cov.idCover) AS cantidad_variant_covers
-FROM Comic c
-JOIN Run r ON c.idComic = r.idComic
-JOIN Issue i ON r.idRun = i.idRun
-JOIN Cover cov ON i.idIssue = cov.idIssue
-WHERE cov.esPrincipal = FALSE
-  AND EXTRACT(YEAR FROM cov.fechaCreacion) = 2023
-GROUP BY c.idComic, c.nombre
-ORDER BY cantidad_variant_covers DESC, c.nombre ASC;
+WITH ConteoVariants AS (
+    SELECT 
+        c.idComic,
+        c.nombre AS comic_nombre,
+        COUNT(cov.idCover) AS cantidad_variant_covers,
+        DENSE_RANK() OVER (ORDER BY COUNT(cov.idCover) DESC) AS ranking
+    FROM Comic c
+    JOIN Run r ON c.idComic = r.idComic
+    JOIN Issue i ON r.idRun = i.idRun
+    JOIN Cover cov ON i.idIssue = cov.idIssue
+    WHERE cov.esPrincipal = FALSE
+      AND EXTRACT(YEAR FROM cov.fechaCreacion) = 2023
+    GROUP BY c.idComic, c.nombre
+)
+SELECT idComic, comic_nombre, cantidad_variant_covers
+FROM ConteoVariants
+WHERE ranking = 1;
 
 
 -- ----------------------------------------------------------------------------
@@ -154,8 +159,8 @@ ORDER BY r.popularidad DESC, r.idRun ASC;
 -- Consulta C: Mostrar todos los cómics en los que haya participado un artista
 -- en particular, pero solamente haciendo variant covers.
 -- (Ejemplo de prueba para idArtista = 4: Todd McFarlane, quien hizo variant covers
--- en The Amazing Spider-Man y Batman sin participar en sus portadas principales
--- ni páginas interiores, mientras que en Spawn sí hizo portada principal e interior).
+-- en The Amazing Spider-Man y Batman: Year One sin participar en portadas principales
+-- ni páginas interiores de dichos cómics).
 -- ----------------------------------------------------------------------------
 SELECT DISTINCT 
     c.idComic,
@@ -193,7 +198,7 @@ ORDER BY c.idComic;
 -- de cómics y runs insertando o borrando entradas de issues.
 -- ----------------------------------------------------------------------------
 
--- Limpieza preventiva por si la consulta fue interrumpida previamente
+-- Limpieza preventiva
 DELETE FROM Issue WHERE idIssue = 1001;
 
 -- Paso 1: Consultar valores iniciales de Run y Comic para idRun = 1
@@ -212,8 +217,7 @@ JOIN Run r ON c.idComic = r.idComic
 WHERE r.idRun = 1;
 
 -- Paso 2: Insertar un nuevo Issue en idRun = 1
--- (Los triggers trg_actualizar_ventas_run y trg_actualizar_metricas_comic actualizan
--- automáticamente la popularidad y ejemplaresVendidos en Run y Comic).
+-- (Los triggers propagan automáticamente métricas a Run y Comic)
 INSERT INTO Issue (idIssue, numero, popularidad, ejemplaresVendidos, idRun)
 VALUES (1001, 99, 5.0, 25000, 1);
 
@@ -253,85 +257,16 @@ WHERE r.idRun = 1;
 
 -- ----------------------------------------------------------------------------
 -- Consulta E: Mostrar los 10 artistas y escritores cuyos cómics tengan
--- la mayor puntuación posible.
+-- la mayor puntuación de popularidad.
+-- Resuelta mediante la invocación de la función analítica programada.
 -- ----------------------------------------------------------------------------
-WITH ObrasPorCreador AS (
-    -- Cómics creados directamente por un Autor
-    SELECT p.idPersona, p.nombre || ' ' || p.apellidos AS nombre_completo, p.alias,
-           'Escritor/Autor' AS rol, c.popularidad
-    FROM Persona p
-    JOIN Autor a ON p.idPersona = a.idPersona
-    JOIN Comic c ON a.idAutor = c.idAutor
-
-    UNION ALL
-
-    -- Cómics en cuyos Runs participó un Autor (RunAutor)
-    SELECT p.idPersona, p.nombre || ' ' || p.apellidos AS nombre_completo, p.alias,
-           'Escritor/Autor' AS rol, c.popularidad
-    FROM Persona p
-    JOIN Autor a ON p.idPersona = a.idPersona
-    JOIN RunAutor ra ON a.idAutor = ra.idAutor
-    JOIN Run r ON ra.idRun = r.idRun
-    JOIN Comic c ON r.idComic = c.idComic
-
-    UNION ALL
-
-    -- Cómics en cuyos Covers participó un Artista
-    SELECT p.idPersona, p.nombre || ' ' || p.apellidos AS nombre_completo, p.alias,
-           'Artista' AS rol, c.popularidad
-    FROM Persona p
-    JOIN Artista art ON p.idPersona = art.idPersona
-    JOIN Cover cov ON art.idArtista = cov.idArtista
-    JOIN Issue i ON cov.idIssue = i.idIssue
-    JOIN Run r ON i.idRun = r.idRun
-    JOIN Comic c ON r.idComic = c.idComic
-
-    UNION ALL
-
-    -- Cómics en cuyas páginas interiores participó un Artista (ParticipacionArtista)
-    SELECT p.idPersona, p.nombre || ' ' || p.apellidos AS nombre_completo, p.alias,
-           'Artista' AS rol, c.popularidad
-    FROM Persona p
-    JOIN Artista art ON p.idPersona = art.idPersona
-    JOIN ParticipacionArtista pa ON art.idArtista = pa.idArtista
-    JOIN Issue i ON pa.idIssue = i.idIssue
-    JOIN Run r ON i.idRun = r.idRun
-    JOIN Comic c ON r.idComic = c.idComic
-)
-SELECT 
-    idPersona,
-    nombre_completo,
-    alias,
-    STRING_AGG(DISTINCT rol, ' / ' ORDER BY rol) AS roles_en_comics,
-    MAX(popularidad) AS mayor_puntuacion_comic
-FROM ObrasPorCreador
-GROUP BY idPersona, nombre_completo, alias
-ORDER BY mayor_puntuacion_comic DESC, nombre_completo ASC
-LIMIT 10;
+SELECT * FROM fn_top10_creadores_popularidad();
 
 
 -- ----------------------------------------------------------------------------
 -- Consulta F: Mostrar los artistas con más de 10 años desde su comienzo
 -- en el medio a la fecha actual de consulta, pero solamente si no han trabajado
 -- en variant covers en los últimos 6 meses.
--- (Nota: Chip Zdarsky, idArtista = 7, queda excluido por tener una variant cover
--- creada hace 2 meses).
+-- Resuelta mediante la invocación de la función analítica programada.
 -- ----------------------------------------------------------------------------
-SELECT 
-    art.idArtista,
-    p.nombre || ' ' || p.apellidos AS nombre_artista,
-    p.alias,
-    p.fechaComienzo,
-    EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.fechaComienzo))::INTEGER AS anios_en_el_medio
-FROM Artista art
-JOIN Persona p ON art.idPersona = p.idPersona
-WHERE 
-    p.fechaComienzo <= CURRENT_DATE - INTERVAL '10 years'
-    AND NOT EXISTS (
-        SELECT 1
-        FROM Cover cov
-        WHERE cov.idArtista = art.idArtista
-          AND cov.esPrincipal = FALSE
-          AND cov.fechaCreacion >= CURRENT_DATE - INTERVAL '6 months'
-    )
-ORDER BY anios_en_el_medio DESC;
+SELECT * FROM fn_artistas_veteranos_sin_variants(CURRENT_DATE);
